@@ -1,6 +1,15 @@
 const express = require('express')
+var morgan = require('morgan')
 const app = express()
 app.use(express.json())
+app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
+
+morgan.token('body', (req, res) => {
+    if (req.method === "POST") {
+        return JSON.stringify(req.body)
+    }
+    return ""
+})
 
 let persons = [
     {
@@ -71,8 +80,11 @@ app.post('/api/persons', (req, res) => {
     }
 
     const id = Math.floor(Math.random() * 10000)
-    const person = body
-    person.id = id
+    const person = {
+        "name": body.name,
+        "number": body.number,
+        "id": id
+    }
     persons = persons.concat(person)
     res.json(person)
 })
