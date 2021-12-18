@@ -1,6 +1,8 @@
 const express = require('express')
 var morgan = require('morgan')
+const cors = require('cors')
 const app = express()
+app.use(cors())
 app.use(express.json())
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
 
@@ -62,20 +64,20 @@ app.delete('/api/persons/:id', (req, res) => {
 app.post('/api/persons', (req, res) => {
     const body = req.body
     if (!body.name) {
-        return res.status(400).json({ 
-          error: 'Name missing' 
+        return res.status(400).json({
+          error: 'Name missing'
         })
       }
-      
+
     if (!body.number) {
-        return res.status(400).json({ 
-            error: 'Number missing' 
+        return res.status(400).json({
+            error: 'Number missing'
         })
     }
 
     if (persons.some(person => person.name === body.name)) {
-        return res.status(400).json({ 
-            error: 'Name already exists' 
+        return res.status(400).json({
+            error: 'Name already exists'
         })
     }
 
@@ -89,7 +91,7 @@ app.post('/api/persons', (req, res) => {
     res.json(person)
 })
 
-const PORT = 3001
+const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`)
 })
