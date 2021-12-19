@@ -86,14 +86,14 @@ app.post('/api/persons', (req, res) => {
         })
     }
 
-    const id = Math.floor(Math.random() * 10000)
-    const person = {
+    const person = new Person({
         "name": body.name,
         "number": body.number,
-        "id": id
-    }
-    persons = persons.concat(person)
-    res.json(person)
+    })
+
+    person.save().then(newPerson => {
+      res.json(newPerson)
+    })
 })
 
 const PORT = process.env.PORT || 3001
