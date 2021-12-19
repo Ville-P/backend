@@ -16,51 +16,34 @@ morgan.token('body', (req, res) => {
     return ""
 })
 
-let persons = [
-    {
-        "name": "Arto Hellas",
-        "number": "040-123456",
-        "id": 1
-    },
-    {
-        "name": "Ada Lovelace",
-        "number": "39-44-5323523",
-        "id": 2
-    },
-    {
-        "name": "Dan Abramov",
-        "number": "12-43-234345",
-        "id": 3
-    },
-    {
-        "name": "Mary Poppendieck",
-        "number": "39-23-6423122",
-        "id": 4
-    }
-]
-
-app.get('/info', (req, res) => {
-    console.log(req.headers)
-    res.send(`Phonebook has info for ${persons.length} people<br>${Date()}`)
+app.get('/info', (req, res, next) => {
+  Person.find({})
+  .then(people => {
+    res.send(`Phonebook has info for ${people.length} people<br>${Date()}`)
+  })
+  .catch(error => next(error))
 })
 
-app.get('/api/persons', (req, res) => {
+app.get('/api/persons', (req, res, next) => {
   Person.find({}).then(people => {
     res.json(people)
   })
+  .catch(error => next(error))
 })
 
-app.get('/api/persons/:id', (req, res) => {
-    const id = Number(req.params.id)
-    const person = persons.find(person => person.id === id)
-    if (person) {
-        res.json(person)
-    } else {
+app.get('/api/persons/:id', (req, res, next) => {
+    Person.findById(req.params.id)
+    .then(result => {
+      if (result) {
+        res.json(result)
+      } else {
         res.status(404).end()
-    }
+      }
+    })
+    .catch(error => next(error))
 })
 
-app.delete('/api/persons/:id', (req, res) => {
+app.delete('/api/persons/:id', (req, res, next) => {
     Person.findByIdAndRemove(req.params.id)
     .then(result => {
       res.status(204).end()
@@ -82,21 +65,62 @@ app.post('/api/persons', (req, res) => {
         })
     }
 
-    if (persons.some(person => person.name === body.name)) {
-        return res.status(400).json({
-            error: 'Name already exists'
-        })
-    }
+    let nameAlreadyInUse = false
+    Person.find({name: body.name})
+    .then(person => {
+        if (person) {
+          nameAlreadyInUse = true
+        }
+    })
+    .catch(error => next(error))
 
-    const person = new Person({
+    if (nameAlreadyInUse) {
+      return res.status(400).json({
+          error: 'Name already exists'
+      })
+    } else {
+      const person = new Person({
+          "name": body.name,
+          "number": body.number,
+      })
+
+      person.save().then(newPerson => {
+        res.json(newPerson)
+      })
+    }
+})
+
+app.put('/api/persons/:id', (req, res, next) => {
+    const body = req.body
+    const person = {
         "name": body.name,
         "number": body.number,
+    }
+    Person.findByIdAndUpdate(req.params.id, person, {new: true})
+    .then(updatedPerson => {
+        res.json(updatedPerson)
     })
-
-    person.save().then(newPerson => {
-      res.json(newPerson)
-    })
+    .catch(error => next(error))
 })
+
+const unknownEndpoint = (request, response) => {
+  response.status(404).send({ error: 'unknown endpoint' })
+}
+// olemattomien osoitteiden käsittely
+app.use(unknownEndpoint)
+
+const errorHandler = (error, request, response, next) => {
+  console.log(error.name)
+  console.error(error.message)
+
+  if (error.name === 'CastError') {
+    return response.status(400).send({ error: 'malformatted id' })
+  }
+
+  next(error)
+}
+// virheellisten pyyntöjen käsittely
+app.use(errorHandler)
 
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
